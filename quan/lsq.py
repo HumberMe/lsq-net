@@ -46,3 +46,17 @@ class LsqQuan(t.nn.Module):
         x = self.round_pass(x)
         x = x * s_scale
         return x
+
+class LsqQuanW(LsqQuan):
+    def __init__(self, bit, weight, all_positive=False, symmetric=False, per_channel=True):
+        super(LsqQuan, self).__init__(bit,all_positive,symmetric,per_channel)
+        num_scales = weight.shape[0]
+        if len(weight.shape) == 4:
+            self.s = t.nn.Parameter(t.zeros(num_scales,1,1,1)+weight.detach().abs().mean())
+        else:
+            assert len(weight.shape)==2
+            self.s = t.nn.Parameter(t.zeros(num_scales,1)+weight.detach().abs().mean())
+
+
+
+

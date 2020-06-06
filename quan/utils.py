@@ -4,7 +4,7 @@ from .lsq import *
 from .func import *
 
 
-def quantizer(default_cfg, this_cfg=None):
+def quantizer(default_cfg, this_cfg=None,weight=None):
     target_cfg = dict(default_cfg)
     if this_cfg is not None:
         for k, v in this_cfg.items():
@@ -13,7 +13,12 @@ def quantizer(default_cfg, this_cfg=None):
     if target_cfg['bit'] is None:
         q = t.nn.Identity
     elif target_cfg['mode'] == 'lsq':
-        q = LsqQuan
+        if target_cfg['per_channel']:
+            assert weight is not None
+            q = LsqQuanW
+            target_cfg['weight']=weight
+        else:
+            q = LsqQuan
     else:
         raise ValueError('Cannot find quantizer `%s`', target_cfg['mode'])
 
@@ -29,14 +34,15 @@ def find_modules_to_quantize(model, quan_scheduler):
                 replaced_modules[name] = QuanModuleMapping[type(module)](
                     module,
                     quan_w_fn=quantizer(quan_scheduler.weight,
-                                        quan_scheduler.excepts[name].weight),
+                                        quan_scheduler.excepts[name].weight,
+                                        weight=module.weight),
                     quan_a_fn=quantizer(quan_scheduler.act,
                                         quan_scheduler.excepts[name].act)
                 )
             else:
                 replaced_modules[name] = QuanModuleMapping[type(module)](
                     module,
-                    quan_w_fn=quantizer(quan_scheduler.weight),
+                    quan_w_fn=quantizer(quan_scheduler.weight,weight=module.weight),
                     quan_a_fn=quantizer(quan_scheduler.act)
                 )
         elif name in quan_scheduler.excepts:
